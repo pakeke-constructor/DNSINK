@@ -77,18 +77,19 @@ _G.iml = require("lib.iml.iml")
 _G.Kirigami = require("lib.kirigami")
 _G.ui = require("src.ui.ui")
 
+_G.devcmd = require("src.devcmd")
+
 _G.analytics = require("src.modules.analytics.analytics")
-_G.agentbridge = require("src.modules.agentbridge.agentbridge")
 _G.vignette = require("src.modules.vignette.vignette")
 
 
 _G.HUD = require("src.hud.hud")
-_G.nodeEventService = require("src.nodeEventService")
+
 _G.textPopupService = require("src.modules.textPopupService")
 
 
 _G.g = require("src.g")
-require("src.ev_q_defs")
+
 
 if consts.TEST then
     require("src.ecs.ecs_tests")
@@ -105,26 +106,11 @@ local secondCount = 0
 
 
 local function assertValid()
-    for _, id in ipairs(g.getSquadList()) do
-        local info = g.getSquadInfo(id)
-        assert(g.isImage(info.icon), "Invalid squad icon: " .. tostring(info.icon) .. " for " .. tostring(id))
-    end
-
     for _, id in ipairs(g.getEntityList()) do
         local def = g.getEntityDef(id)
         if def.image ~= nil then
             assert(g.isImage(def.image), "Invalid entity image: " .. tostring(def.image) .. " for " .. tostring(id))
         end
-    end
-
-    for _, id in ipairs(g.getPerkList()) do
-        local info = g.getPerkInfo(id)
-        assert(g.isImage(info.image), "Invalid perk image: " .. tostring(info.image) .. " for " .. tostring(id))
-    end
-
-    for _, id in ipairs(g.getBlessingList()) do
-        local info = g.getBlessingInfo(id)
-        assert(g.isImage(info.image), "Invalid blessing image: " .. tostring(info.image) .. " for " .. tostring(id))
     end
 end
 
@@ -153,6 +139,7 @@ function love.load()
     _loadtime = false
 end
 
+
 function love.update(dt)
     g.pollHandlers()
     agentbridge.update()
@@ -177,7 +164,6 @@ function love.update(dt)
 end
 
 function love.quit()
-    agentbridge.stop()
     settings.save()
     g.saveAndInvalidateRun()
 end
