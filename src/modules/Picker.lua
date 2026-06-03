@@ -1,0 +1,159 @@
+
+--[[
+
+============
+Vose-Alias-method picker
+============
+
+OK:
+I'm not gonna fakken lie, I'm actually NOT ENTIRELY SURE HOW THIS WORKS.
+Basically, it's a highly efficient discrete-random-sampling algorithm,
+using an algorithm called the "Alias method":
+https://en.wikipedia.org/wiki/Alias_method
+
+Code taken from:  https://gist.github.com/RyanPattison/7dd900f4042e8a6f9f23
+(Released into public domain, per Ryan's request)
+
+Ok::::
+After some "better" research, I found an excellent source 
+with a very intuitive explanation:
+https://www.keithschwarz.com/darts-dice-coins/
+
+]]
+
+---Picker is responsible of picking weighted items quickly at O(1) time
+---multiple times.
+---
+---If the item list is dynamic or it only needs be picked once then consider
+---@class picker.Picker
+---@field entryList any[]
+---@field alias table<integer, integer>
+---@field prob table<integer, number>
+---@field n integer
+local Picker = {}
+Picker.__index = Picker
+
+
+local function shallowCpy(t)
+    local t2 = {}
+    for k,v in pairs(t)do
+        t2[k]=v
+    end
+    return t2
+end
+
+
+
+---@param items any[]
+---@param weights number[]
+---@return picker.Picker
+local function newPicker(items, weights)
+    local self = setmetatable({}, Picker)
+
+    self.entryList = shallowCpy(items)
+
+    local total = 0
+    for _,v in ipairs(weights) do
+        assert(v >= 0, "all weights must be non-negative")
+        total = total + v
+    end
+
+    local normalize = #weights / total
+    local norm = {}
+    local small_stack = {}
+    local big_stack = {}
+
+    for i,w in ipairs(weights) do
+        norm[i] = w * normalize
+        if norm[i] < 1 then
+            table.insert(small_stack, i)
+        else
+            table.insert(big_stack, i)
+        end
+    end
+
+    local prob = {}
+    local alias = {}
+    while small_stack[1] and big_stack[1] do -- both non-empty
+        local small = table.remove(small_stack)
+        local large = table.remove(big_stack)
+        prob[small] = norm[small]
+        alias[small] = large
+        norm[large] = norm[large] + norm[small] - 1
+        if norm[large] < 1 then
+            table.insert(small_stack, large)
+        else
+            table.insert(big_stack, large)
+        end
+    end
+
+    for _, v in ipairs(big_stack) do
+        prob[v] = 1
+    end
+    for _, v in ipairs(small_stack) do
+        prob[v] = 1
+    end
+
+    self.alias = alias
+    self.prob = prob
+    self.n = #weights
+    return self
+end
+
+
+local function pickIndex(self, rand, rand2)
+    -- 0 <= num <= 1
+    local index = math.floor(rand * self.n) + 1
+    if rand2 < self.prob[index] then
+        return index
+    else
+        return self.alias[index]
+    end
+end
+
+
+--[[
+    The Vose Alias method requires TWO random variables to work properly.
+]]
+---@param rng {random:fun(self:any):number}?
+---@return any
+function Picker:pick(rng)
+    local rand1, rand2
+    if rng then
+        rand1 = rng:random()
+        rand2 = rng:random()
+    else
+        rand1 = math.random()
+        rand2 = math.random()
+    end
+
+    local i = pickIndex(self, rand1, rand2)
+    return self.entryList[i]
+end
+
+
+---Picks an entry and excludes it from future pickAndRemove calls.
+---Not guaranteed unique, but tries up to maxTries times.
+---@param rng {random:fun(self:any):number}?
+---@param maxTries integer?
+---@return any
+function Picker:pickAndRemove(rng, maxTries)
+    maxTries = maxTries or 5
+    if not self._excluded then
+        self._excluded = {}
+    end
+    for _ = 1, maxTries do
+        local pick = self:pick(rng)
+        if not self._excluded[pick] then
+            self._excluded[pick] = true
+            return pick
+        end
+    end
+    -- fallback: return last pick even if duplicate
+    local pick = self:pick(rng)
+    self._excluded[pick] = true
+    return pick
+end
+
+
+return newPicker
