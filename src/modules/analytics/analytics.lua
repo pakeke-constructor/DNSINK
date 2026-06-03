@@ -1,5 +1,4 @@
 local asynchttp = require("src.modules.asynchttp.asynchttp")
-local sceneManager = require("src.scenes.sceneManager")
 
 ---@class _Analytics
 local analytics = {}
@@ -44,7 +43,6 @@ end
 ---@field public playtime integer
 ---@field public timestamp integer
 ---@field public game_version integer
----@field public scene string
 ---@field public save table
 
 ---@type _Analytics.SendData[]
@@ -206,17 +204,13 @@ end
 ---@param event _Analytics.EventType
 function analytics.send(event)
     if disableAnalytics then return end
-    if not g.hasRun() then return end
     assert(steamId, "forgot to call analytics.init()?")
 
-    local sn = g.getRun()
-    local _, scname = sceneManager.getCurrentScene()
     queuedSendData[#queuedSendData+1] = {
         event = event,
         playtime = math.floor(sn.playtime),
         timestamp = os.time(),
         game_version = consts.GAME_VERSION,
-        scene = scname or "",
         save = sn:serialize()
     }
 

@@ -11,6 +11,9 @@ consts.PROFILING = false
 consts.CONSOLE_LOG_LEVEL = "debug"
 consts.FILE_LOG_LEVEL = "none"
 
+consts.GAME_VERSION = 0
+
+consts.MAX_PLAYING_SOURCES = 30
 
 
 

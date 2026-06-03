@@ -1,5 +1,5 @@
 local n9slice = require("src.modules.n9slice.n9slice")
-local boxes = require("src.ui.boxes")
+local boxes = require("src.client.ui.boxes")
 local Box = boxes.Box
 local HBox = boxes.HBox
 
@@ -533,9 +533,6 @@ end
 ui.Box = Box.new
 ui.HBox = HBox.new
 
-
-ui.drawSquadCard = require(".squad_card")
-ui.drawBlessingCard = require(".blessing_card")
 
 
 
