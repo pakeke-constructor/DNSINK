@@ -61,39 +61,39 @@ _G.json = require("lib.json")
 
 
 ---@type g.consts
-_G.consts = require("umg.consts")
+_G.consts = require("src.umg.consts")
 
-_G.settings = require("umg.settings")
-_G.log = require("umg.modules.log")
-_G.typecheck = require("umg.modules.typecheck.typecheck")
-_G.objects = require("umg.modules.objects.objects")
-_G.helper = require("umg.modules.helper.helper")
-_G.richtext = require("umg.modules.richtext.exports")
-_G.localization = require("umg.modules.localization")
-_G.gsman = require("umg.modules.gsman.gsman")
+_G.settings = require("src.umg.settings")
+_G.log = require("src.umg.modules.log")
+_G.typecheck = require("src.umg.modules.typecheck.typecheck")
+_G.objects = require("src.umg.modules.objects.objects")
+_G.helper = require("src.umg.modules.helper.helper")
+_G.richtext = require("src.umg.modules.richtext.exports")
+_G.localization = require("src.umg.modules.localization")
+_G.gsman = require("src.umg.modules.gsman.gsman")
 _G.loc = _G.localization.localize
 _G.interp = _G.localization.newInterpolator
 _G.iml = require("lib.iml.iml")
 _G.Kirigami = require("lib.kirigami")
-_G.ui = require("umg.client.ui.ui")
+_G.ui = require("src.umg.client.ui.ui")
 
-_G.devcmd = require("umg.devcmd")
+_G.devcmd = require("src.umg.devcmd")
 
-_G.analytics = require("umg.modules.analytics.analytics")
-_G.vignette = require("umg.modules.vignette.vignette")
-
-
-_G.textPopupService = require("umg.modules.textPopupService")
+_G.analytics = require("src.umg.modules.analytics.analytics")
+_G.vignette = require("src.umg.modules.vignette.vignette")
 
 
-_G.g = require("umg.g")
+_G.textPopupService = require("src.umg.modules.textPopupService")
+
+
+_G.g = require("src.umg.g")
 
 
 if consts.TEST then
     require("src.ecs.ecs_tests")
 end
 
-local subpixel = require("umg.modules.subpixel.init")
+local subpixel = require("src.umg.modules.subpixel.init")
 
 
 
