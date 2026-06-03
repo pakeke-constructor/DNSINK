@@ -9,12 +9,12 @@ local atlas = AutoAtlas(2048, 2048)
 
 local nameToQuad = {}
 
-local richtext = require("src.modules.richtext.exports")
+local richtext = require("umg.modules.richtext.exports")
 
 
 
-local bgm = require("src.client.sound.bgm")
-local sfx = require("src.client.sound.sfx")
+local bgm = require("umg.client.sound.bgm")
+local sfx = require("umg.client.sound.sfx")
 
 
 
@@ -523,7 +523,7 @@ end
 
 
 -- Event Bus / Question Bus
-local reducers = require("src.modules.reducers")
+local reducers = require("umg.modules.reducers")
 
 local definedEvents = {}
 local questions = {}
