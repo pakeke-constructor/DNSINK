@@ -11,6 +11,11 @@ local packetIdToName = {--[[
     [integer-id] -> packetName
 ]]}
 
+local isPacketUnreliable = {--[[
+    [packetName] -> boolean
+]]}
+
+
 
 ---@class umg.packets
 local packets = {}
@@ -38,7 +43,8 @@ end
 
 ---@param name string
 ---@param typelist umg.packets.PacketType[]
-function packets.definePacket(name, typelist)
+---@param isUnreliable boolean
+function packets.definePacketType(name, typelist, isUnreliable)
     if packetTypes[name] then
         error("duplicate packet name: " .. name)
     end
@@ -153,6 +159,12 @@ function packets.deserialize(str)
     end
 
     return true, out
+end
+
+
+
+function packets.isPacketUnreliable(packetName)
+    return isPacketUnreliable[packetName]
 end
 
 
