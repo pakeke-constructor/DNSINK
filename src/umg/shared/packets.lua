@@ -99,25 +99,51 @@ function Buffer:flush()
 end
 
 
+local luaTypeOf = {
+    number = "number",
+    string = "string",
+    boolean = "boolean",
+    entity = "number", -- entities are sent over the wire as numeric ids
+}
+
+
 ---Deserialize a flushed buffer into a list of {packetName, ...} packets.
+---On the server, the contents are type-validated (clients are untrusted).
 ---@param str string
----@return table[]
+---@return boolean ok, table[]|string resultOrError
 function packets.deserialize(str)
-    local raw = buffer.decode(str)
+    local ok, raw = pcall(buffer.decode, str)
+    if not ok then
+        return false, "failed to decode buffer: " .. tostring(raw)
+    end
+    if type(raw) ~= "table" then
+        return false, "expected a table of packets"
+    end
+
     local out = {}
 
     for i, packet in ipairs(raw) do
+        if type(packet) ~= "table" then
+            return false, "packet at index " .. i .. " is not a table"
+        end
+
         local packetId = packet[1]
         local name = packetIdToName[packetId]
         if not name then
-            error("unknown packet id: " .. tostring(packetId))
+            return false, "unknown packet id: " .. tostring(packetId)
         end
 
         local entry = packetTypes[name]
         local result = {name}
-        for j = 2, #packet do
+        for j = 2, #entry do
             local ty = entry[j]
             local val = packet[j]
+
+            if SERVER and type(val) ~= luaTypeOf[ty] then
+                return false, ("packet '%s' field %d: expected %s, got %s")
+                    :format(name, j - 1, ty, type(val))
+            end
+
             if ty == "entity" then
                 val = idToEnt(val)
             end
@@ -126,8 +152,9 @@ function packets.deserialize(str)
         out[i] = result
     end
 
-    return out
+    return true, out
 end
+
 
 
 packets.Buffer = Buffer

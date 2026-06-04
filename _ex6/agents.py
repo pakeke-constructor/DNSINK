@@ -81,7 +81,7 @@ CODING_STYLE_PROMPT = ex6.Message(role="system", overview="coding-style", conten
 
 
 
-CODE_MODE_SYS_PROMPT = make_code_mode_system_prompt([
+TOOLS = ([
     read_file, glob, search, read_headers, read_body,
     write_file, edit_file, edit_file_lines,
     explore_agent, web_search, websearch_agent,
@@ -91,13 +91,16 @@ CODE_MODE_SYS_PROMPT = make_code_mode_system_prompt([
     load_skill
 ])
 
+CODE_MODE_SYS_PROMPT = make_code_mode_system_prompt(TOOLS)
+
+MAIN_SYSTEM_PROMPT = MAIN_SYSTEM_PROMPT.with_tools(TOOLS)
+
 
 EX6_MD = ex6.Message(role="system", content=open("EX6.md","r").read(), overview="EX6.md")
 
 
 coder = Context("c_opus", yolo=False, model=M.OPUS_LATEST.id, reasoning="high", messages=[
     MAIN_SYSTEM_PROMPT,
-    CODE_MODE_SYS_PROMPT,
     ENV_PROMPT,
     # CODING_STYLE_PROMPT,
     EX6_MD,
