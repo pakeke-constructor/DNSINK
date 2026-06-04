@@ -505,36 +505,6 @@ function helper.gradientOutlineRect(dir, col1, col2, x,y,w,h, lineWidth)
     end
 end
 
-local alphaTestShader = love.graphics.newShader([[
-vec4 effect(vec4 color, Image tex, vec2 tc, vec2 sc) {
-    vec4 pixel = Texel(tex, tc) * color;
-    if (pixel.a < 0.01) discard;
-    return pixel;
-}
-]])
-helper.alphaTestShader = alphaTestShader
-
----Draws a gradient rect, but clipped to whatever `drawFunc` draws as a stencil.
----@param dir "vertical"|"horizontal"
----@param col1 objects.Color|[number,number,number,number?]
----@param col2 objects.Color|[number,number,number,number?]
----@param x number
----@param y number
----@param w number
----@param h number
----@param drawFunc fun()
-function helper.gradientRectStencil(dir, col1, col2, x,y,w,h, drawFunc)
-    love.graphics.setColorMask(false)
-    love.graphics.setStencilState("replace", "always", 1)
-    local sh = lg.getShader()
-    love.graphics.setShader(alphaTestShader)
-    drawFunc()
-    love.graphics.setShader(sh)
-    love.graphics.setStencilState("keep", "greater", 0)
-    love.graphics.setColorMask(true)
-    helper.gradientRect(dir, col1, col2, x, y, w, h)
-    love.graphics.setStencilState()
-end
 
 end
 

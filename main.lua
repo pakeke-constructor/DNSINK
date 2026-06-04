@@ -47,14 +47,11 @@ end
 
 
 
-local _loadtime = true
+local loadTime = true
 function _G.isLoadTime()
-    return _loadtime
+    return loadTime
 end
 
-
-
-_G.lg = love.graphics
 
 _G.utf8 = require("utf8")
 _G.json = require("lib.json")
@@ -64,36 +61,9 @@ _G.json = require("lib.json")
 _G.consts = require("src.umg.consts")
 
 _G.settings = require("src.umg.settings")
-_G.log = require("src.umg.modules.log")
-_G.typecheck = require("src.umg.modules.typecheck.typecheck")
-_G.objects = require("src.umg.modules.objects.objects")
-_G.helper = require("src.umg.modules.helper.helper")
-_G.richtext = require("src.umg.modules.richtext.exports")
-_G.localization = require("src.umg.modules.localization")
-_G.gsman = require("src.umg.modules.gsman.gsman")
-_G.loc = _G.localization.localize
-_G.interp = _G.localization.newInterpolator
-_G.iml = require("lib.iml.iml")
-_G.Kirigami = require("lib.kirigami")
-_G.ui = require("src.umg.client.ui.ui")
-
-_G.devcmd = require("src.umg.devcmd")
-
-_G.analytics = require("src.umg.modules.analytics.analytics")
-_G.vignette = require("src.umg.modules.vignette.vignette")
-
-
-
-_G.g = require("src.umg.g")
-
-
-if consts.TEST then
-    require("src.ecs.ecs_tests")
-end
-
-local subpixel = require("src.umg.modules.subpixel.init")
-
-
+_G.log = require("src.modules.log")
+_G.typecheck = require("src.modules.typecheck.typecheck")
+_G.objects = require("src.modules.objects.objects")
 
 
 
@@ -109,8 +79,6 @@ local LAUNCH_ARGS = {
     clientIpPort = "ip:port" or nil,
     -- if this ^^^^ is given; client is connecting to online server
 
-    menuPath = "src.dnsink_menu.menu",
-
     localServer = true or false,
     -- if this ^^^ is true, server will open a local ENet connection
     serverIpPort = "ip:port" or nil, -- 
@@ -121,7 +89,11 @@ local LAUNCH_ARGS = {
 
 ---@param args any
 ---@return {mode:"server"|"client"|"menu", modlist:string[], localClient?:boolean, clientIpPort:string, localServer?:boolean, serverIpPort:string}
-local function doLaunchArgs(args)
+local function parseLaunchArgs(args)
+    if not args then
+        log.error("Game MUST be booted with launchJson args.")
+        args = {'{"mode":"menu"}'}
+    end
     local jsonStr = {}
     for i, arg in ipairs(args) do
         table.insert(jsonStr, arg)
@@ -129,10 +101,7 @@ local function doLaunchArgs(args)
 
     local launchArgs = json.decode(table.concat(jsonStr))
 
-    local isServer = launchArgs.kind == "server"
-    local isClient = launchArgs.kind == "client"
-    assert(isClient or isServer)
-    assert((not isClient) or launchArgs.localClient or launchArgs.clientIpPort)
+    local isClient = launchArgs.mode == "client"
 
     for k, v in pairs(LAUNCH_ARGS) do
         if not launchArgs[k] then
@@ -154,8 +123,8 @@ end
 
 
 
-function love.load(args)
-    rawset(_G, "launchArgs", doLaunchArgs(args))
+local function load(args)
+    rawset(_G, "launchArgs", parseLaunchArgs(args))
 
     rawset(_G, "CLIENT", false)
     rawset(_G, "MENU", false)
@@ -170,36 +139,70 @@ function love.load(args)
         love.window.setMode(800, 600)
 
     else assert(launchArgs.mode == "client")
+        assert(launchArgs.localClient or launchArgs.clientIpPort)
         rawset(_G, "CLIENT", true)
         love.window = require("love.window")
         love.window.setMode(800, 600)
+    end
 
-    -- shared globals
-    -- Shared between client/server for consistency,
-    -- (And so that there's a SSOT)
-    require("src.shared.globals")
-    --=============================
+   --=============================
 
     local ffi = require("ffi")
     assert(ffi.abi("le"), "Bad endianness. This game will not run on your computer.")
 
-    local modloader = require("src.shared.modloader.modloader")
-    modloader.loadMods({"oli:test_mod_2"})
-
-    local Conn = require("src.shared.conn.Conn")
-    rawset(_G, "conn", Conn())
+    -- local modloader = require("src.shared.modloader.modloader")
+    -- modloader.loadMods({"oli:test_mod_2"})
 
     print((SERVER and "Server booted") or "Client loaded")
 end
 
+load()
 
 
 
-function love.draw()
+if CLIENT then
+    _G.lg = love.graphics
 end
 
 
-function love.update(dt)
-    conn:update(dt)
+_G.helper = require("src.modules.helper.helper")
+_G.richtext = require("src.modules.richtext.exports")
+_G.localization = require("src.modules.localization")
+_G.gsman = require("src.modules.gsman.gsman")
+_G.loc = _G.localization.localize
+_G.interp = _G.localization.newInterpolator
+_G.iml = require("lib.iml.iml")
+_G.Kirigami = require("lib.kirigami")
+_G.ui = require("src.umg.client.ui.ui")
+
+_G.devcmd = require("src.umg.devcmd")
+
+_G.analytics = require("src.modules.analytics.analytics")
+if CLIENT then
+    _G.vignette = require("src.modules.vignette.vignette")
+end
+
+
+
+_G.g = require("src.umg.g")
+
+
+
+-- local subpixel = require("src.modules.subpixel.init")
+
+
+
+
+
+function love.load()
+    if SERVER then
+        require("src.umg.server.server_main")
+    elseif CLIENT then
+        require("src.umg.client.client_main")
+    else
+        require("src.umg.client.client_main")
+    end
+
+    loadTime = false
 end
 

@@ -1,45 +1,37 @@
 
--- This has to be done very very early, before any LOVE modules loaded.
--- Some LOVE modules has JIT-optimized function depending on `jit.status()`.
-if love._os == "Android" and jit then jit.off() jit.flush() end
-local isMobile = love._os == "Android" or love._os == "iOS"
-
-local isFullscreen = false
-if isMobile then
-    isFullscreen  = true
-end
 
 function _G.love.conf(t)
-    t.identity = "donotsink"                    -- The name of the save directory (string)
+    t.identity = nil                    -- The name of the save directory (string)
     t.appendidentity = false            -- Search files in source directory before save directory (boolean)
     -- t.version = we are using "12.0"                  -- The LÖVE version this game was made for (string)
-    t.console = true                   -- lovec.exe provides console; AllocConsole not needed
+
+    t.console = true                    -- Attach a console (boolean, Windows only)
+    t.accelerometerjoystick = true      -- Enable the accelerometer on iOS and Android by exposing it as a Joystick (boolean)
     t.externalstorage = false           -- True to save files (and read from the save directory) in external storage on Android (boolean)
 
     t.highdpi = true                   -- Enable high-dpi mode for the window on a Retina display (boolean)
 
     t.graphics.gammacorrect = false              -- Enable gamma-correct rendering, when supported by the system (boolean)
-    t.graphics.excluderenderers = {"vulkan"}
 
     t.audio.mic = false                 -- Request and use microphone capabilities in Android (boolean)
     t.audio.mixwithsystem = true        -- Keep background music playing when opening LOVE (boolean, iOS and Android only)
 
     t.window.title = "DNSINK"         -- The window title (string)
-    t.window.icon = nil -- "assets/icon.png"  -- Filepath to an image to use as the window's icon (string)
-    t.window.width = 900                -- The window width (number)
+    t.window.icon = nil  -- Filepath to an image to use as the window's icon (string)
+    t.window.width = 800                -- The window width (number)
     t.window.height = 600               -- The window height (number)
     t.window.borderless = false         -- Remove all border visuals from the window (boolean)
-    t.window.resizable = not isMobile   -- Let the window be user-resizable (boolean)
+    t.window.resizable = true          -- Let the window be user-resizable (boolean)
     t.window.minwidth = 1               -- Minimum window width if the window is resizable (number)
     t.window.minheight = 1              -- Minimum window height if the window is resizable (number)
-    t.window.fullscreen = isFullscreen      -- Enable fullscreen (boolean)
-    t.window.fullscreentype = nil       -- "desktop" -- Choose between "desktop" fullscreen or "exclusive" fullscreen mode (string)
+    t.window.fullscreen = false          -- Enable fullscreen (boolean)
+    t.window.fullscreentype =nil -- "desktop" -- Choose between "desktop" fullscreen or "exclusive" fullscreen mode (string)
     t.window.vsync = -1                 -- Vertical sync mode (number)
     t.window.msaa = 0                   -- The number of samples to use with multi-sampled antialiasing (number)
     t.window.depth = nil                -- The number of bits per sample in the depth buffer
     t.window.stencil = nil              -- The number of bits per sample in the stencil buffer
-    t.window.displayindex = 1           -- Index of the monitor to show the window in (number)
-    t.window.usedpiscale = false        -- Enable automatic DPI scaling when highdpi is set to true as well (boolean)
+    t.window.displayindex = 1                -- Index of the monitor to show the window in (number)
+    t.window.usedpiscale = true        -- Enable automatic DPI scaling when highdpi is set to true as well (boolean)
     t.window.x = nil                    -- The x-coordinate of the window's position in the specified display (number)
     t.window.y = nil                    -- The y-coordinate of the window's position in the specified display (number)
 
@@ -58,9 +50,13 @@ function _G.love.conf(t)
     t.modules.system = true             -- Enable the system module (boolean)
     t.modules.thread = true             -- Enable the thread module (boolean)
     t.modules.timer = true              -- Enable the timer module (boolean), Disabling it will result 0 delta time in love.update
-    t.modules.touch = true              -- Enable the touch module (boolean)
+    t.modules.touch = false              -- Enable the touch module (boolean)
     t.modules.video = false              -- Enable the video module (boolean)
-    t.modules.window = true             -- Enable the window module (boolean)
+
+    -- start with the window disabled;
+    -- From here, the client will create the window.
+    -- (This makes it so the server doesn't have window)
+    t.modules.window = false
 end
 
 
@@ -72,13 +68,26 @@ local function error_printer(msg, layer)
 	print((debug.traceback("Error: " .. tostring(msg), 1+(layer or 1)):gsub("\n[^\n]+$", "")))
 end
 
+
+local function dummyPoll()
+	love.event.pump()
+	for e, a, b, c in love.event.poll() do
+        
+    end
+    if love.timer then
+        love.timer.sleep(0.1)
+    end
+end
+
+
+
 function love.errorhandler(msg)
 	msg = tostring(msg)
 
 	error_printer(msg, 2)
 
-	if not love.window or not love.graphics or not love.event then
-		return
+	if (true) or (not love.window) or (not love.graphics) or (not love.event) then
+		return dummyPoll
 	end
 
 	if not love.graphics.isCreated() or not love.window.isOpen() then
@@ -106,7 +115,6 @@ function love.errorhandler(msg)
 	if love.audio then love.audio.stop() end
 
 	love.graphics.reset()
-	love.graphics.setFont(love.graphics.newFont(15))
 
 	love.graphics.setColor(1, 1, 1)
 
@@ -118,20 +126,20 @@ function love.errorhandler(msg)
 	for char in msg:gmatch(utf8.charpattern) do
 		table.insert(sanitizedmsg, char)
 	end
-	sanitizedmsg = table.concat(sanitizedmsg)
+	local errStr = table.concat(sanitizedmsg)
 
 	local err = {}
 
 	table.insert(err, "Error\n")
-	table.insert(err, sanitizedmsg)
+	table.insert(err, errStr)
 
-	if #sanitizedmsg ~= #msg then
+	if #errStr ~= #msg then
 		table.insert(err, "Invalid UTF-8 string in error message.")
 	end
 
 	table.insert(err, "\n")
 
-	for l in trace:gmatch("([^\n]+)") do
+	for l in trace:gmatch("(.-)\n") do
 		if not l:match("boot.lua") then
 			l = l:gsub("stack traceback:", "Traceback\n")
 			table.insert(err, l)
@@ -162,19 +170,12 @@ function love.errorhandler(msg)
 		p = p .. "\n\nPress Ctrl+C or tap to copy this error"
 	end
 
-	-- Notify agentbridge clients about the crash
-	local ok, ab = pcall(function() return agentbridge end)
-	if ok and ab and ab.notifyCrash then
-		pcall(ab.notifyCrash, fullErrorText)
-	end
-
 	return function()
-		love.event.pump(0.1)
+		love.event.pump()
 
 		for e, a, b, c in love.event.poll() do
 			if e == "quit" then
-				-- Also handle restart args.
-				return a or 1, b
+				return 1
 			elseif e == "keypressed" and a == "escape" then
 				return 1
 			elseif e == "keypressed" and a == "c" and love.keyboard.isDown("lctrl", "rctrl") then
@@ -198,7 +199,7 @@ function love.errorhandler(msg)
 		draw()
 
 		if love.timer then
-			love.timer.sleep(0.001)
+			love.timer.sleep(0.1)
 		end
 	end
 

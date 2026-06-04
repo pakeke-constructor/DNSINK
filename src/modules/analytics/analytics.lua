@@ -1,4 +1,4 @@
-local asynchttp = require("umg.modules.asynchttp.asynchttp")
+local asynchttp = require("src.modules.asynchttp.asynchttp")
 
 ---@class _Analytics
 local analytics = {}

@@ -13,8 +13,12 @@ consts.FILE_LOG_LEVEL = "none"
 
 consts.GAME_VERSION = 0
 
+consts.ANALYTICS_URL = ""
+
 consts.MAX_PLAYING_SOURCES = 30
 
+
+consts.DEFAULT_MENU_PATH = "src.dnsink_menu.menu"
 
 
 return consts

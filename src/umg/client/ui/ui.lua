@@ -1,7 +1,5 @@
-local n9slice = require("umg.modules.n9slice.n9slice")
-local boxes = require("umg.client.ui.boxes")
-local Box = boxes.Box
-local HBox = boxes.HBox
+local n9slice = require("src.modules.n9slice.n9slice")
+
 
 ---@class ui
 local ui = {}
@@ -512,7 +510,6 @@ function ui.startUI()
     iml.pushTransform(t)
 end
 
-local simulatedSafeArea = pcall(string.dump, love.window.getSafeArea)
 
 function ui.endUI()
     assert(uiPushed, "attempt to call endUI before startUI")
@@ -528,10 +525,6 @@ function ui.assertUIStarted()
     end
 end
 
-
--- Super useful for rendering text inside boxes (see boxes.lua for API)
-ui.Box = Box.new
-ui.HBox = HBox.new
 
 
 
