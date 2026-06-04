@@ -60,6 +60,17 @@ function packets.definePacket(name, typelist)
 end
 
 
+do
+local buffer = require("string.buffer")
+
+print(buffer.decode(buffer.encode(42)))       --> 42
+print(buffer.decode(buffer.encode("hello")))  --> hello
+print(buffer.decode(buffer.encode({true, "hello"})))     --> {true, "hello"}
+
+--[[
+for this, you should ser/deser the entire table as one big go.
+]]
+end
 
 
 
