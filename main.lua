@@ -101,8 +101,6 @@ local function parseLaunchArgs(args)
 
     local launchArgs = json.decode(table.concat(jsonStr))
 
-    local isClient = launchArgs.mode == "client"
-
     for k, v in pairs(LAUNCH_ARGS) do
         if not launchArgs[k] then
             -- if a defined key doesn't exist; set it to false.

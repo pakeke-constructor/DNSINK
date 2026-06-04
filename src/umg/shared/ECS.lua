@@ -7,7 +7,6 @@ local table_clear = require("table.clear")
 local ECSWorld = objects.Class("umg.ecs:ECSWorld")
 
 
-local PARTITION_CHUNKSIZE = 32
 
 function ECSWorld:init(systemNames)
     self.entities = objects.BufferedSet()

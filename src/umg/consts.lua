@@ -18,6 +18,11 @@ consts.ANALYTICS_URL = ""
 consts.MAX_PLAYING_SOURCES = 30
 
 
+consts.LOCALHOST_UDP_IPPORT = "localhost:57843";
+-- udp-ip:port to be used for localhost server. 
+-- (Hardcoded; means we don't need to do weird port-discovery stuff)
+
+
 consts.DEFAULT_MENU_PATH = "src.dnsink_menu.menu"
 
 
