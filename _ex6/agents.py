@@ -52,8 +52,9 @@ The ONLY acceptable text output is: a direct answer, a clarifying question, or a
 </output_rules>
 
 <code_editing_rules>
-- Don't add features, refactor, docstrings, comments, or type annotations beyond what was asked.
+- Don't add features, refactor, docstrings, comments, beyond what was asked.
 - Don't add error handling for scenarios that can't happen.
+- You MUST add type annotations to variables/APIs that are exposed. For functions that are local, and the meaning is clear, no need to annotate; best not to bloat the code.
 - Three similar lines > premature abstraction.
 </code_editing_rules>
 

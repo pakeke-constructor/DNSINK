@@ -83,8 +83,6 @@ _G.analytics = require("src.umg.modules.analytics.analytics")
 _G.vignette = require("src.umg.modules.vignette.vignette")
 
 
-_G.textPopupService = require("src.umg.modules.textPopupService")
-
 
 _G.g = require("src.umg.g")
 
@@ -97,122 +95,111 @@ local subpixel = require("src.umg.modules.subpixel.init")
 
 
 
-local perSecondUpdateTimer = 0
-local secondCount = 0
 
 
-local function assertValid()
-    for _, id in ipairs(g.getEntityList()) do
-        local def = g.getEntityDef(id)
-        if def.image ~= nil then
-            assert(g.isImage(def.image), "Invalid entity image: " .. tostring(def.image) .. " for " .. tostring(id))
+--[[
+this table serves as a description for what launchArgs SHOULD LOOK LIKE.
+(NOT ACTUAL VALUES!!!)
+]]
+local LAUNCH_ARGS = {
+    mode = "server" or "client" or "menu",
+    -- modlist = {"mod", "list", "goes", "here"},
+
+    localClient = true or false, -- <<<< override ipport with localhost:port
+    clientIpPort = "ip:port" or nil,
+    -- if this ^^^^ is given; client is connecting to online server
+
+    menuPath = "src.dnsink_menu.menu",
+
+    localServer = true or false,
+    -- if this ^^^ is true, server will open a local ENet connection
+    serverIpPort = "ip:port" or nil, -- 
+    -- if this ^^^^ is given; server is hosting an online server
+}
+
+
+
+---@param args any
+---@return {mode:"server"|"client"|"menu", modlist:string[], localClient?:boolean, clientIpPort:string, localServer?:boolean, serverIpPort:string}
+local function doLaunchArgs(args)
+    local jsonStr = {}
+    for i, arg in ipairs(args) do
+        table.insert(jsonStr, arg)
+    end
+
+    local launchArgs = json.decode(table.concat(jsonStr))
+
+    local isServer = launchArgs.kind == "server"
+    local isClient = launchArgs.kind == "client"
+    assert(isClient or isServer)
+    assert((not isClient) or launchArgs.localClient or launchArgs.clientIpPort)
+
+    for k, v in pairs(LAUNCH_ARGS) do
+        if not launchArgs[k] then
+            -- if a defined key doesn't exist; set it to false.
+            -- This way we avoid __index errors
+            launchArgs[k] = false
         end
     end
+
+    -- defensive __index, ensures we dont access undefined args
+    setmetatable(launchArgs, {
+        __index = function(_t, k)
+            error("Undefined launch-arg: " .. tostring(k))
+        end
+    })
+    return launchArgs
 end
 
 
 
-function love.load()
-    assert(love.filesystem.createDirectory("saves"))
-    vignette.setStrength(0.8)
-    analytics.init(nil)
-    if consts.DEV_MODE then
-        love.keyboard.setTextInput(true)
-    end
-    g.loadImagesFrom("assets")
-    g.loadImagesFrom("src/content")
-    g.requireFolder("src/entities")
-    g.requireFolder("src/content")
-    assertValid()
-    love.window.setFullscreen(settings.isFullscreen())
-    g._runPostLoad()
-    _loadtime = false
+
+function love.load(args)
+    rawset(_G, "launchArgs", doLaunchArgs(args))
+
+    rawset(_G, "CLIENT", false)
+    rawset(_G, "MENU", false)
+    rawset(_G, "SERVER", false)
+
+    if launchArgs.mode == "server" then
+        rawset(_G, "SERVER", true)
+
+    elseif launchArgs.mode == "menu" then
+        rawset(_G, "MENU", true)
+        love.window = require("love.window")
+        love.window.setMode(800, 600)
+
+    else assert(launchArgs.mode == "client")
+        rawset(_G, "CLIENT", true)
+        love.window = require("love.window")
+        love.window.setMode(800, 600)
+
+    -- shared globals
+    -- Shared between client/server for consistency,
+    -- (And so that there's a SSOT)
+    require("src.shared.globals")
+    --=============================
+
+    local ffi = require("ffi")
+    assert(ffi.abi("le"), "Bad endianness. This game will not run on your computer.")
+
+    local modloader = require("src.shared.modloader.modloader")
+    modloader.loadMods({"oli:test_mod_2"})
+
+    local Conn = require("src.shared.conn.Conn")
+    rawset(_G, "conn", Conn())
+
+    print((SERVER and "Server booted") or "Client loaded")
+end
+
+
+
+
+function love.draw()
 end
 
 
 function love.update(dt)
-    g.pollHandlers()
-    iml.setPointer(love.mouse.getPosition())
-    textPopupService.update(dt)
-
-    perSecondUpdateTimer = perSecondUpdateTimer + dt
-    while perSecondUpdateTimer >= 1 do
-        perSecondUpdateTimer = perSecondUpdateTimer - 1
-        secondCount = secondCount + 1
-        
-        g.call("perSecondUpdate", secondCount)
-    end
+    conn:update(dt)
 end
 
-function love.quit()
-    settings.save()
-    g.saveAndInvalidateRun()
-end
-
-function love.draw()
-    if settings.isFullscreen() ~= love.window.getFullscreen() then
-        love.window.setFullscreen(settings.isFullscreen(), "desktop")
-    end
-    lg.setShader(subpixel.shader)
-    local CLIENT = true
-    if CLIENT then
-        iml.beginFrame()
-        iml.endFrame()
-        textPopupService.draw(ui.getUIScalingTransform())
-        vignette.draw()
-    end
-    devcmd.draw()
-    if CLIENT and consts.DEV_MODE then
-        local fps = love.timer.getFPS()
-        love.graphics.setColor(1, 1, 1, 0.5)
-        love.graphics.push()
-        love.graphics.scale(2)
-        love.graphics.printf("  FPS: " .. fps, 0, 2, love.graphics.getWidth() / 2 - 4, "right")
-        love.graphics.pop()
-        love.graphics.setColor(1, 1, 1, 1)
-    end
-end
-
-function love.mousepressed(mx, my, button, istouch, presses)
-    iml.mousepressed(mx, my, button, istouch, presses)
-end
-
-function love.mousereleased(mx, my, button, istouch)
-    iml.mousereleased(mx, my, button, istouch)
-end
-
-function love.mousemoved(mx, my, dx, dy, istouch)
-end
-
-function love.keypressed(key, scancode, isrep)
-    if devcmd.keypressed(key) then return end
-    if scancode == "[" then
-        consts.SHOW_DEV_STUFF = consts.DEV_MODE and (not consts.SHOW_DEV_STUFF)
-    elseif scancode == "return" and love.keyboard.isDown("lalt", "ralt") then
-        settings.setFullscreen(not settings.isFullscreen())
-    end
-    iml.keypressed(key, scancode, isrep)
-end
-
-function love.keyreleased(key, scancode)
-    iml.keyreleased(key, scancode)
-end
-
-function love.textinput(text)
-    if devcmd.textinput(text) then return end
-    iml.textinput(text)
-end
-
-function love.wheelmoved(dx, dy)
-    iml.wheelmoved(dx, dy)
-end
-
-function love.resize(w, h)
-    vignette.resize()
-end
-
-function love.directorydropped(fullpath)
-end
-
-function love.filedropped(file)
-end
