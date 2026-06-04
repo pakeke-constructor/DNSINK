@@ -1,5 +1,6 @@
 
 local Class = require("src.modules.objects.Class")
+local buffer = require("string.buffer")
 
 
 local packetTypes = {--[[
@@ -25,12 +26,39 @@ local VALID_TYPES = {
 }
 
 
+-- TODO: fill these in once entity-replication exists.
+local function entToId(ent)
+    return 1
+end
+
+local function idToEnt(id)
+    return {}
+end
+
+
 ---@param name string
----@param typelist table
+---@param typelist umg.packets.PacketType[]
 function packets.definePacket(name, typelist)
-    packetTypes[name] = currId
+    if packetTypes[name] then
+        error("duplicate packet name: " .. name)
+    end
+    for i, ty in ipairs(typelist) do
+        if not VALID_TYPES[ty] then
+            error("invalid packet type at index " .. i .. ": " .. tostring(ty))
+        end
+    end
+
+    local packetId = currId
     currId = currId + 1
-    -- todo, fill in
+
+    local entry = {packetId}
+    ---@cast entry umg.packets.PacketType[]
+    for i, ty in ipairs(typelist) do
+        entry[i + 1] = ty
+    end
+
+    packetTypes[name] = entry
+    packetIdToName[packetId] = name
 end
 
 
@@ -41,38 +69,68 @@ function Buffer:init()
     self.buf = {}
 end
 
-function Buffer:push(packetId,...)
-    -- pushes to buf
+
+---@param packetName string
+function Buffer:push(packetName, ...)
+    local entry = packetTypes[packetName]
+    if not entry then
+        error("unknown packet: " .. tostring(packetName))
+    end
+
+    local packet = {entry[1]}
+    for i = 1, select("#", ...) do
+        local ty = entry[i + 1]
+        local val = select(i, ...)
+        if ty == "entity" then
+            val = entToId(val)
+        end
+        packet[i + 1] = val
+    end
+
+    self.buf[#self.buf + 1] = packet
 end
+
 
 ---@return string serialized string
 function Buffer:flush()
+    local str = buffer.encode(self.buf)
+    self.buf = {}
+    return str
 end
 
 
+---Deserialize a flushed buffer into a list of {packetName, ...} packets.
+---@param str string
+---@return table[]
+function packets.deserialize(str)
+    local raw = buffer.decode(str)
+    local out = {}
 
+    for i, packet in ipairs(raw) do
+        local packetId = packet[1]
+        local name = packetIdToName[packetId]
+        if not name then
+            error("unknown packet id: " .. tostring(packetId))
+        end
 
----@param name string
----@param typelist table
-function packets.definePacket(name, typelist)
-    packetTypes[name] = currId
-    currId = currId + 1
+        local entry = packetTypes[name]
+        local result = {name}
+        for j = 2, #packet do
+            local ty = entry[j]
+            local val = packet[j]
+            if ty == "entity" then
+                val = idToEnt(val)
+            end
+            result[j] = val
+        end
+        out[i] = result
+    end
+
+    return out
 end
 
 
-do
-local buffer = require("string.buffer")
-
-print(buffer.decode(buffer.encode(42)))       --> 42
-print(buffer.decode(buffer.encode("hello")))  --> hello
-print(buffer.decode(buffer.encode({true, "hello"})))     --> {true, "hello"}
-
---[[
-for this, you should ser/deser the entire table as one big go.
-]]
-end
-
+packets.Buffer = Buffer
 
 
 return packets
-
