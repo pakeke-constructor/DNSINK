@@ -11,7 +11,7 @@ The game is built using an engine called "UMG".
 - join game with friends (p2p udp holepunch)
 - build a pirate ship together in sandbox/god mode
 - sail eastwards, try not to sink, encounter storms, other enemy ships, sea-serpents.
-- (gamble coins, buy stupid things, mess around with the ship, etc)
+- (gamble coins, buy stupid things, mess around with the ship, try survive, etc)
 
 It's essentially a friendslop-bet, but 2d-platformer-like, and with terraria-like scale.
 
@@ -43,22 +43,30 @@ ui-content: provides a UI client for standalone games.
 ## High-level architecture:
 (NOT IMPLEMENTED YET.)
 
-server/
+umg/
+  server/
     lobby: tracks players + auth
-
-client/
+  client/
     images, auto-atlas
     sfx
     particles
     ui, iml
-
-shared/ (available on both client/server)
+  shared/ (available on both client/server)
     ECSFrame: represents a "world reference frame." entities live here.
     Entity: a ECS entity. Contained inside an ECSFrame.
     serialization: packet-schema + packet ser/deser, strong-typing + validation of client-packets
     connection: Handles everything relating to enet connection + RPC API
     grid: handles the world-grid. (See note below)
     replication: tracks entity ids, replicate ent components across network
+    ev-bus, (umg.on/answer, umg.call/ask)
+
+dnsink/ Where all the core content is defined:
+  entities/** all entities defined here
+  systems/** hook onto umg.on / umg.ask
+
+modules/
+  a bunch of shared, standalone modules to be used by anyone in the codebase
+
 
 ## Game details:
 
