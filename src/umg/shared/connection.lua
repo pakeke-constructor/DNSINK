@@ -6,16 +6,70 @@ local packets = require("src.umg.shared.packets")
 local connection = {}
 
 
+-- enet channels: reliable packets and unreliable packets are kept on
+-- separate channels so a backlog of reliable data can't stall unreliable data.
+local RELIABLE_CHANNEL = 0
+local UNRELIABLE_CHANNEL = 1
+
+
 local host -- the enet host
 local serverPeer -- (client only) peer pointing at the server
 
-local clientUnicastBuffers = {--[[
-    [clientId] -> Buffer
-    clients must have "personal" buffers for unicasting, or else it'll be mixed into the broadcast buffer
+local clients = {--[[
+    [clientId] -> peer    (server only) connected clients
 ]]}
 
-local clients = {} -- (server only) set of connected peers
+-- [packetName] -> function(clientId_or_nil, ...) registered packet handlers
+local handlers = {}
 
+
+---@param peer table
+local function peerToClientId(peer)
+    return peer:index()
+end
+
+
+
+--------------------------------------------------------------------
+-- Buffers
+-- reliable and unreliable packets get separate buffers so that a
+-- big reliable buffer never blocks unreliable (or vice-versa).
+--------------------------------------------------------------------
+
+local function newBufferPair()
+    return {
+        [RELIABLE_CHANNEL] = packets.Buffer(),
+        [UNRELIABLE_CHANNEL] = packets.Buffer(),
+    }
+end
+
+-- (client) buffers destined for the server
+local clientBuffers = newBufferPair()
+
+-- (server) per-client buffers, plus broadcast buffers
+local clientUnicastBuffers = {--[[ [clientId] -> bufferPair ]]}
+local broadcastBuffers = newBufferPair()
+
+
+local function channelOf(packetType)
+    return packets.isPacketUnreliable(packetType) and UNRELIABLE_CHANNEL or RELIABLE_CHANNEL
+end
+
+
+local function getUnicastBuffers(clientId)
+    local b = clientUnicastBuffers[clientId]
+    if not b then
+        b = newBufferPair()
+        clientUnicastBuffers[clientId] = b
+    end
+    return b
+end
+
+
+
+--------------------------------------------------------------------
+-- Connection setup
+--------------------------------------------------------------------
 
 local function getIpPort()
     if SERVER then
@@ -36,27 +90,38 @@ end
 function connection.start()
     local ipport = getIpPort()
     if SERVER then
-        host = enet.host_create(ipport)
+        host = enet.host_create(ipport, nil, 2)
         log.info("Server listening on " .. ipport)
     else
-        host = enet.host_create()
-        serverPeer = host:connect(ipport)
+        host = enet.host_create(nil, 1, 2)
+        serverPeer = host:connect(ipport, 2)
         log.info("Client connecting to " .. ipport)
     end
 end
 
 
----@param ev table enet event
-local function handleReceive(ev)
-    local ok, result = packets.deserialize(ev.data)
+
+--------------------------------------------------------------------
+-- Receiving
+--------------------------------------------------------------------
+
+---@param clientId integer? nil on client (packet came from server)
+---@param data string
+local function dispatch(clientId, data)
+    local ok, result = packets.deserialize(data)
     if not ok then
         log.warn("bad packet: " .. tostring(result))
         return
     end
-    assert(type(result)=="table")
+    ---@cast result table[]
     for _, packet in ipairs(result) do
         local name = packet[1]
-        umg.call(name, ev.peer, unpack(packet, 2))
+        local handler = handlers[name]
+        if handler then
+            handler(clientId, unpack(packet, 2))
+        else
+            log.warn("no handler for packet: " .. tostring(name))
+        end
     end
 end
 
@@ -69,19 +134,15 @@ function connection.poll(timeout)
     while ev do
         if ev.type == "connect" then
             if SERVER then
-                clients[ev.peer] = true
-                umg.call("clientConnected", ev.peer)
-            else
-                umg.call("connectedToServer")
+                clients[peerToClientId(ev.peer)] = ev.peer
             end
         elseif ev.type == "receive" then
-            handleReceive(ev)
+            dispatch(SERVER and peerToClientId(ev.peer) or nil, ev.data)
         elseif ev.type == "disconnect" then
             if SERVER then
-                clients[ev.peer] = nil
-                umg.call("clientDisconnected", ev.peer)
-            else
-                umg.call("disconnectedFromServer")
+                local id = peerToClientId(ev.peer)
+                clients[id] = nil
+                clientUnicastBuffers[id] = nil
             end
         end
         ev = host:service(0)
@@ -89,51 +150,113 @@ function connection.poll(timeout)
 end
 
 
----(client) send a buffer to the server.
----@param buf umg.Packets.Buffer
-function connection.sendToServer(buf)
-    serverPeer:send(buf:flush(), 0, "reliable")
+
+--------------------------------------------------------------------
+-- Sending (internal queueing)
+--------------------------------------------------------------------
+
+-- (client) queue a packet to the server
+local function queueToServer(packetType, ...)
+    clientBuffers[channelOf(packetType)]:push(packetType, ...)
+end
+
+-- (server) queue a packet to one client
+local function queueToClient(clientId, packetType, ...)
+    getUnicastBuffers(clientId)[channelOf(packetType)]:push(packetType, ...)
+end
+
+-- (server) queue a packet to all clients
+local function queueBroadcast(packetType, ...)
+    broadcastBuffers[channelOf(packetType)]:push(packetType, ...)
 end
 
 
-local function clientIdToPeer(clientId)
-    error("not yet implemented, do this later.")
+local function sendBufferPair(target, bufs)
+    for channel, flag in pairs({[RELIABLE_CHANNEL]="reliable", [UNRELIABLE_CHANNEL]="unsequenced"}) do
+        local data = bufs[channel]:flush()
+        if #data > 0 then
+            target:send(data, channel, flag)
+        end
+    end
 end
 
 
----(server) send a buffer to a specific client peer.
----@param clientId string
----@param packetType string
----@param ... any
-function connection.unicastToClient(clientId, packetType, ...)
-    local peer = clientIdToPeer(clientId)
-    error("not yet implemented, dont worry about this for now.")
-end
-
-
----(server) broadcast a packet +args to all clients.
----@param packetType string
----@param ... any
-function connection.broadcastToClients(packetType, ...)
-    host:broadcast(...) -- todo, fill this in
-end
-
-
----(server) broadcast a packet +args to all clients.
----@param packetType string
----@param ... any
-function connection.sendToServer(packetType, ...)
-    -- todo, fill this in
-end
-
-
+---Flush all buffers and send them over the network.
 function connection.flush()
-    -- flushes ALL buffers and sends them over network
+    if SERVER then
+        for clientId, bufs in pairs(clientUnicastBuffers) do
+            local peer = clients[clientId]
+            if peer then
+                sendBufferPair(peer, bufs)
+            end
+        end
+        sendBufferPair(host, broadcastBuffers)
+    else
+        if serverPeer then
+            sendBufferPair(serverPeer, clientBuffers)
+        end
+    end
 end
 
 
-function connection.handle(packetName, func)
-    -- register packet handler, func is called when recv packet
+
+--------------------------------------------------------------------
+-- RPC
+--------------------------------------------------------------------
+
+---@param packetType string
+---@param typelist umg.packets.PacketType[]
+---@param func function
+local function defineRPC(packetType, typelist, func, isUnreliable)
+    packets.definePacketType(packetType, typelist, isUnreliable)
+    handlers[packetType] = func
+end
+
+
+---Define a client->server RPC.
+---`func(clientId, ...)` runs on the SERVER when the packet is received.
+---The returned function, called on the CLIENT, queues the packet to the server.
+---@param packetType string
+---@param typelist umg.packets.PacketType[]
+---@param func fun(clientId:integer, ...)
+---@param isUnreliable? boolean
+---@return fun(...)
+function connection.clientToServerRPC(packetType, typelist, func, isUnreliable)
+    if SERVER then
+        defineRPC(packetType, typelist, func, isUnreliable)
+        return function() error("clientToServerRPC '" .. packetType .. "' cannot be sent from server") end
+    else
+        packets.definePacketType(packetType, typelist, isUnreliable)
+        return function(...)
+            queueToServer(packetType, ...)
+        end
+    end
+end
+
+
+---Define a server->client RPC.
+---`func(...)` runs on the CLIENT when the packet is received.
+---The returned function, called on the SERVER, queues the packet.
+---Call `rpc(clientId, ...)` to unicast, or `rpc(nil, ...)` to broadcast.
+---@param packetType string
+---@param typelist umg.packets.PacketType[]
+---@param func fun(...)
+---@param isUnreliable? boolean
+---@return fun(clientId:integer?, ...)
+function connection.serverToClientRPC(packetType, typelist, func, isUnreliable)
+    if SERVER then
+        packets.definePacketType(packetType, typelist, isUnreliable)
+        return function(clientId, ...)
+            if clientId then
+                queueToClient(clientId, packetType, ...)
+            else
+                queueBroadcast(packetType, ...)
+            end
+        end
+    else
+        defineRPC(packetType, typelist, func, isUnreliable)
+        return function() error("serverToClientRPC '" .. packetType .. "' cannot be sent from client") end
+    end
 end
 
 
