@@ -17,7 +17,8 @@
 
 @echo off
 
-start "Server" lovec . "{"mode":"server","localServer":true}"
-start "Client" lovec . "{"mode":"client","localClient":true}"
+start "Server" lovec . "{\"mode\":\"server\",\"localServer\":true}"
+start "Client" lovec . "{\"mode\":\"client\",\"localClient\":true}"
+
 
 

@@ -154,35 +154,7 @@ local function load(args)
     print((SERVER and "Server booted") or "Client loaded")
 end
 
-load()
 
-
-
-if CLIENT then
-    _G.lg = love.graphics
-end
-
-
-_G.helper = require("src.modules.helper.helper")
-_G.richtext = require("src.modules.richtext.exports")
-_G.localization = require("src.modules.localization")
-_G.gsman = require("src.modules.gsman.gsman")
-_G.loc = _G.localization.localize
-_G.interp = _G.localization.newInterpolator
-_G.iml = require("lib.iml.iml")
-_G.Kirigami = require("lib.kirigami")
-_G.ui = require("src.umg.client.ui.ui")
-
-_G.devcmd = require("src.umg.devcmd")
-
-_G.analytics = require("src.modules.analytics.analytics")
-if CLIENT then
-    _G.vignette = require("src.modules.vignette.vignette")
-end
-
-
-
-_G.g = require("src.umg.g")
 
 
 
@@ -192,7 +164,32 @@ _G.g = require("src.umg.g")
 
 
 
-function love.load()
+function love.load(args)
+    load(args)
+
+    if CLIENT then
+        _G.lg = love.graphics
+    end
+
+    _G.helper = require("src.modules.helper.helper")
+    _G.richtext = require("src.modules.richtext.exports")
+    _G.localization = require("src.modules.localization")
+    _G.gsman = require("src.modules.gsman.gsman")
+    _G.loc = _G.localization.localize
+    _G.interp = _G.localization.newInterpolator
+    _G.iml = require("lib.iml.iml")
+    _G.Kirigami = require("lib.kirigami")
+    _G.ui = require("src.umg.client.ui.ui")
+
+    _G.devcmd = require("src.umg.devcmd")
+
+    _G.analytics = require("src.modules.analytics.analytics")
+    if CLIENT then
+        _G.vignette = require("src.modules.vignette.vignette")
+    end
+
+    _G.g = require("src.umg.g")
+
     if SERVER then
         require("src.umg.server.server_main")
     elseif CLIENT then
