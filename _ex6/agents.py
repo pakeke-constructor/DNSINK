@@ -85,11 +85,11 @@ TOOLS = ([
     read_file, glob, search, read_headers, read_body,
     write_file, edit_file, edit_file_lines,
     explore_agent, web_search, websearch_agent,
-    plan_done, plan_read, plan_write,
     git_working_tree,
     love2d_docs,
     load_skill
 ])
+
 
 CODE_MODE_SYS_PROMPT = make_code_mode_system_prompt(TOOLS)
 
