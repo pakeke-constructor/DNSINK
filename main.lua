@@ -187,7 +187,7 @@ function love.load(args)
         _G.devcmd = require("src.umg.client.devcmd")
     end
 
-    _G.g = require("src.umg.umg")
+    _G.umg = require("src.umg.umg")
 
     if SERVER then
         require("src.umg.server.server_main")

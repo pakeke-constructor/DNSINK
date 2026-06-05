@@ -348,8 +348,8 @@ helper.PERCENTAGE_FORMATTER = {"%d%%"}
 ---@param imageName string
 ---@param splitsize integer
 function helper.splitTileImage(imageName, splitsize)
-    local atlas = g.getAtlas()
-    local tilemapQuad = g.getImageQuad(imageName)
+    local atlas = umg.getAtlas()
+    local tilemapQuad = umg.getImageQuad(imageName)
     local tx, ty, tw, th = tilemapQuad:getViewport()
     ---@type love.Quad[][]
     local tilemap = {}
@@ -543,7 +543,7 @@ function helper.splitQuadHorizontally(quad, numDivisions)
             y,                         -- same y position
             divisionWidth,             -- width of each slice
             h,                         -- same height
-            g.getAtlas()               -- atlas dimensions
+            umg.getAtlas()               -- atlas dimensions
         )
         table.insert(listOfQuads, newQuad)
     end
@@ -596,7 +596,7 @@ function helper.drawSpark(x, y, time, rot, sparkArgs)
     local dx, dy = helper.fromPolar(rot, len)
     lg.setColor(color[1], color[2], color[3], (color[4] or 1) * alpha)
     -- lg.line(x, y, x + dx, y + dy)
-    g.drawImage("spark_bolt", x+dx, y+dy, rot)
+    umg.drawImage("spark_bolt", x+dx, y+dy, rot)
 end
 
 
@@ -609,7 +609,7 @@ local TOOLTIP_TEXT_MAX_WIDTH = 200
 function helper.tooltip(text, x, y, ox, oy)
     ox = ox or 0
     oy = oy or 0
-    local font = g.getMainFont(16)
+    local font = umg.getMainFont(16)
     local width, lines = richtext.getWrap(text, font, TOOLTIP_TEXT_MAX_WIDTH)
 
     local tdrawableR, tcontentR = ui.getTooltipRegion(x, y, width, lines * font:getHeight(), safeArea)
@@ -643,12 +643,12 @@ function helper.drawWings(x,y, time, wingImage, scale, wingDistance)
     local r = WING_ROTATION * ((math.sin(t) + 1)/2) + WING_ROT_OFFSET
     -- if imageShadow then
     --     love.graphics.setColor(0,0,0, 0.4)
-    --     g.drawImage(wingImage, x + offset + o, y + dy + o, r, sx,sy, kx,ky)
-    --     g.drawImage(wingImage, x - offset - o, y + dy + o, -r, sx*-1,sy, kx,ky)
+    --     umg.drawImage(wingImage, x + offset + o, y + dy + o, r, sx,sy, kx,ky)
+    --     umg.drawImage(wingImage, x - offset - o, y + dy + o, -r, sx*-1,sy, kx,ky)
     -- end
 
-    g.drawImage(wingImage, x + offset, y + dy, r, scale,scale)
-    g.drawImage(wingImage, x - offset, y + dy, -r, -scale,scale)
+    umg.drawImage(wingImage, x + offset, y + dy, r, scale,scale)
+    umg.drawImage(wingImage, x - offset, y + dy, -r, -scale,scale)
 end
 
 end
