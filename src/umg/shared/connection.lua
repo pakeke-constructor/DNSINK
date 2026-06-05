@@ -141,9 +141,9 @@ function connection.poll(timeout)
         if ev.type == "connect" then
             if SERVER then
                 clients[peerToClientId(ev.peer)] = ev.peer
-                log.trace("Client connected: ", tostring(ev.peer))
+                log.info("Client connected: ", tostring(ev.peer))
             else
-                log.trace("Connected to server: ", tostring(ev.peer))
+                log.info("Connected to server: ", tostring(ev.peer))
             end
         elseif ev.type == "receive" then
             dispatch(SERVER and peerToClientId(ev.peer) or nil, ev.data)

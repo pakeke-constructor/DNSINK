@@ -181,11 +181,10 @@ function love.load(args)
     _G.Kirigami = require("lib.kirigami")
     _G.ui = require("src.umg.client.ui.ui")
 
-    _G.devcmd = require("src.umg.devcmd")
-
     _G.analytics = require("src.modules.analytics.analytics")
     if CLIENT then
         _G.vignette = require("src.modules.vignette.vignette")
+        _G.devcmd = require("src.umg.client.devcmd")
     end
 
     _G.g = require("src.umg.g")

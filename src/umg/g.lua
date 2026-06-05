@@ -688,7 +688,7 @@ local EVENT_COUNTS = {--[[
     [event] -> integer
 ]]}
 
-function _resetCallEventCounts()
+local function _resetCallEventCounts()
     for k,_ in pairs(EVENT_COUNTS) do
         EVENT_COUNTS[k] = 0
     end

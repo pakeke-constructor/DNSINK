@@ -17,6 +17,8 @@ consts.ANALYTICS_URL = ""
 
 consts.MAX_PLAYING_SOURCES = 30
 
+consts.MAX_EVENT_CALLS_PER_FRAME = 30
+
 
 consts.LOCALHOST_UDP_IPPORT = "localhost:57843";
 -- udp-ip:port to be used for localhost server. 

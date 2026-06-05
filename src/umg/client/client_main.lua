@@ -1,7 +1,10 @@
 
 
 local connection = require("src.umg.shared.connection")
+local modloading = require("src.umg.shared.modloading")
 
+
+modloading.loadMods({})
 
 -- On boot, the client opens its ENet host and connects to the server.
 -- (localClient -> localhost:port, else clientIpPort; see launchArgs)

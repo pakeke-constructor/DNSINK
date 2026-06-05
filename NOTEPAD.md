@@ -68,7 +68,7 @@ What about space-game?
 - ~~set up logging~~
 - ~~set up mode-switching in main.lua (menu, client, server)~~
 - ~~Set up packet schemas, packet-sending (+serverside validation)~~
-- Create Connection API: Get a luaEnet socket connection working
+- ~~Create Connection API: Get a luaEnet socket connection working~~
 - set up API creator w/ setfenv; in future, this does proper sandboxing
 - set up "mod loading" (load systems in `dnsink`)
 - umg.register infrastructure
@@ -76,7 +76,7 @@ What about space-game?
 - umg.clientToServerRPC, umg.serverToClientRPC
 - create ECS and replicated entity infra (DON'T replicate ent-data, just repl ids)
 - setup grids and replicate grid-changes
-- setup `ent:frame()` func, setup `ent:supportingGrid` func
+- setup `ent:frame()` func, setup `ent:supportingGrid()` func
 - clientside Input / Control system (KEEP IT SIMPLE; for now just expose love-events)
 - [DEBUG-INFRA: allow placement of blocks, placement of entities]
 - spawn players
