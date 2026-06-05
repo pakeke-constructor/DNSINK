@@ -195,7 +195,7 @@ function love.load(args)
     elseif CLIENT then
         require("src.umg.client.client_main")
     else
-        require("src.umg.client.client_main")
+        require("src.dnsink_menu.menu_main")
     end
 
     loadTime = false

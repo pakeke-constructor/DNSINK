@@ -91,9 +91,15 @@ function connection.start()
     local ipport = getIpPort()
     if SERVER then
         host = enet.host_create(ipport, nil, 2)
+        -- host_create returns nil if the bind failed (e.g. the port is already
+        -- in use by a leftover server process). Fail loudly instead of limping
+        -- along with a nil host.
+        assert(host, "Server failed to bind on " .. tostring(ipport)
+            .. " (is the port already in use?)")
         log.info("Server listening on " .. ipport)
     else
         host = enet.host_create(nil, 1, 2)
+        assert(host, "Client failed to create ENet host")
         serverPeer = host:connect(ipport, 2)
         log.info("Client connecting to " .. ipport)
     end
@@ -135,6 +141,9 @@ function connection.poll(timeout)
         if ev.type == "connect" then
             if SERVER then
                 clients[peerToClientId(ev.peer)] = ev.peer
+                log.trace("Client connected: ", tostring(ev.peer))
+            else
+                log.trace("Connected to server: ", tostring(ev.peer))
             end
         elseif ev.type == "receive" then
             dispatch(SERVER and peerToClientId(ev.peer) or nil, ev.data)
@@ -171,11 +180,16 @@ local function queueBroadcast(packetType, ...)
 end
 
 
-local function sendBufferPair(target, bufs)
+-- `target` is either a peer (use :send to unicast) or the host (use :broadcast).
+local function sendBufferPair(target, bufs, isBroadcast)
     for channel, flag in pairs({[RELIABLE_CHANNEL]="reliable", [UNRELIABLE_CHANNEL]="unsequenced"}) do
         local data = bufs[channel]:flush()
         if #data > 0 then
-            target:send(data, channel, flag)
+            if isBroadcast then
+                target:broadcast(data, channel, flag)
+            else
+                target:send(data, channel, flag)
+            end
         end
     end
 end
@@ -190,14 +204,15 @@ function connection.flush()
                 sendBufferPair(peer, bufs)
             end
         end
-        sendBufferPair(host, broadcastBuffers)
+        if host then
+            sendBufferPair(host, broadcastBuffers, true)
+        end
     else
         if serverPeer then
             sendBufferPair(serverPeer, clientBuffers)
         end
     end
 end
-
 
 
 --------------------------------------------------------------------
