@@ -3,9 +3,12 @@
 ---@class g
 local g = {}
 
-local AutoAtlas = require("lib.AutoAtlas.AutoAtlas")
 
-local atlas = AutoAtlas(2048, 2048)
+local AutoAtlas, atlas
+if CLIENT then
+    AutoAtlas = require("lib.AutoAtlas.AutoAtlas")
+    atlas = AutoAtlas(2048, 2048)
+end
 
 local nameToQuad = {}
 
@@ -236,7 +239,7 @@ end
 
 
 -- Define 1x1 white image
-do
+if CLIENT then
     -- Add padding around to prevent bleeding
     local id = love.image.newImageData(3, 3, "rgba8")
     id:mapPixel(function() return 1, 1, 1, 0 end) -- fill transparent white
