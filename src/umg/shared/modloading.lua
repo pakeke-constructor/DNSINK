@@ -26,11 +26,7 @@ function modloading.loadMods(modlist)
     HACK: for now, we literally just load everything in `dnsink/`.
     and nothing else.
     ]]
-
-    local mods = love.filesystem.getDirectoryItems("mods")
-    for _, mod in ipairs(mods) do
-        print(mod)
-    end
+    umg.requireFolder("src/dnsink")
 end
 
 

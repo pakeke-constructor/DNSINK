@@ -69,8 +69,7 @@ What about space-game?
 - ~~set up mode-switching in main.lua (menu, client, server)~~
 - ~~Set up packet schemas, packet-sending (+serverside validation)~~
 - ~~Create Connection API: Get a luaEnet socket connection working~~
-- set up API creator w/ setfenv; in future, this does proper sandboxing
-- set up "mod loading" (load systems in `dnsink`)
+- Set up file loading structure for DNSINK
 - umg.register infrastructure
 - umg.defineEntityType infra
 - umg.clientToServerRPC, umg.serverToClientRPC
@@ -83,4 +82,13 @@ What about space-game?
 - lerping for x,y / vx,vy syncing
 - [[[ BASIC SYSTEMS COMPLETED ]]]
 
+## For future:
+- set up API creator w/ setfenv; in future, this does proper sandboxing
+- set up "mod loading" (load systems in `dnsink`)
+
+
+NORTH STAR CONSIDERATION:
+How would DNSINK be "converted" to space-game if needed?
+- Strip out `dnsink` and `dnsink_menu`. (Replace with `spacegame`)
+- We would need to ensure that the core systems fit together nicely.
 

@@ -10,10 +10,11 @@ The game is built using an engine called "UMG".
 ## Game loop:
 - join game with friends (p2p udp holepunch)
 - build a pirate ship together in sandbox/god mode
-- sail eastwards, try not to sink, encounter storms, other enemy ships, sea-serpents.
+- sail eastwards, try not to sink, make/craft cool stuff, earn money, improve ship
 - (gamble coins, buy stupid things, mess around with the ship, try survive, etc)
 
-It's essentially a friendslop-bet, but 2d-platformer-like, and with terraria-like scale.
+It's essentially a friendslop-game, but 2d-platformer-like, and with terraria-like scale.
+
 
 ## Tech stack:
 - love2d + luajit for full project.
@@ -66,9 +67,6 @@ dnsink/ Where all the core content is defined:
 
 modules/
   a bunch of shared, standalone modules to be used by anyone in the codebase
-
-
-## Game details:
 
 
 
